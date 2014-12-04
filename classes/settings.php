@@ -210,8 +210,9 @@ class CPAC_Settings {
 	public function handle_column_request() {
 
 		// only handle updates from the admin columns page
-		if ( ! ( isset($_GET['page'] ) && in_array( $_GET['page'], array( 'codepress-admin-columns' ) ) && isset( $_REQUEST['cpac_action'] ) ) )
+		if ( ! ( isset($_GET['page'] ) && in_array( $_GET['page'], array( 'codepress-admin-columns' ) ) && isset( $_REQUEST['cpac_action'] ) ) ) {
 			return false;
+		}
 
 		// use $_REQUEST because the values are send both over $_GET and $_POST
 		$action = isset( $_REQUEST['cpac_action'] ) ? $_REQUEST['cpac_action'] 	: '';
@@ -272,7 +273,7 @@ class CPAC_Settings {
 			array(
 				'title'		=> __( "Overview", 'cpac' ),
 				'content'	=>
-					"<h5>Codepress Admin Columns</h5>
+					"<h5>Admin Columns</h5>
 					<p>". __( "This plugin is for adding and removing additional columns to the administration screens for post(types), pages, media library, comments, links and users. Change the column's label and reorder them.", 'cpac' ) . "</p>"
 			),
 			array(
@@ -374,23 +375,18 @@ class CPAC_Settings {
 		$show_welcome = false !== get_transient('cpac_show_welcome');
 
 		// Should only be set manual
-		if ( isset( $_GET['info'] ) )
+		if ( isset( $_GET['info'] ) ) {
 			$show_welcome = true;
+		}
 
-		if ( ! $show_welcome )
+		if ( ! $show_welcome ) {
 			return false;
+		}
 
 		// Set check that welcome should not be displayed.
 		delete_transient('cpac_show_welcome');
 
 		$tab = !empty( $_GET['info'] ) ? $_GET['info'] : 'whats-new';
-
-		// check if old site used custom field columns
-		$uses_customfields 	= $this->uses_custom_fields();
-		$uses_sortorder 	= get_option( "cpac_sortable_ac" ) && ! class_exists( 'CAC_Addon_Pro' ) ? true : false;
-
-		$installed_customfields = false;
-		$installed_sortorder 	= false;
 
 		?>
 
@@ -410,27 +406,6 @@ class CPAC_Settings {
 				</h2>
 
 			<?php if ( 'whats-new' === $tab ) : ?>
-
-				<h3><?php _e( "Addons", 'cpac' ); ?></h3>
-				<p>
-					<?php _e( "Addons are now activated by downloading and installing individual plugins. Although these plugins will not be hosted on the wordpress.org repository, each Add-on will continue to receive updates in the usual way.",'cpac'); ?>
-				</p>
-			<?php if ( $uses_sortorder ) : ?>
-				<h4><?php _e( "This website uses the Sortorder Addon. This addon needs to be downloaded." ,'cpac' ); ?></h4>
-				<div class="cpac-alert cpac-alert-success">
-					<p>
-						<?php _e( "Addons are seperate plugins which need to be downloaded.", 'cpac' ); ?> <a href="<?php echo $this->get_settings_url( 'info' ); ?>download-add-ons" class="button-primary" style="display: inline-block;"><?php _e( "Download your Addons", 'cpac'); ?></a>
-					</p>
-				</div>
-			<?php else : ?>
-				<div class="cpac-alert cpac-alert-success">
-					<p>
-						<strong><?php _e( 'This website does not use add-ons', 'cpac' ); ?></strong>. <a target="_blank" href="<?php echo $this->get_url('admincolumnspro'); ?>"><?php _e( 'See our website for Admin Columns Pro.', 'cpac' ); ?></a>
-					</p>
-				</div>
-			<?php endif; ?>
-
-				<hr />
 
 				<h3><?php _e( "Important", 'cpac' ); ?></h3>
 
@@ -455,8 +430,8 @@ class CPAC_Settings {
 				<?php
 
 				$items = file_get_contents( CPAC_DIR . 'readme.txt' );
-
-				$items = end( explode('= ' . CPAC_VERSION . ' =', $items) );
+				$items = explode('= ' . CPAC_VERSION . ' =', $items);
+				$items = end( $items );
 				$items = current( explode("\n\n", $items) );
 				$items = current( explode("= ", $items) );
 				$items = array_filter( array_map('trim', explode("*", $items)) );
@@ -514,7 +489,7 @@ class CPAC_Settings {
 	 */
 	public function display_settings() {
 	?>
-		<table class="form-table cpac-form-table">
+		<table class="form-table cpac-form-table settings">
 			<tbody>
 
 				<tr class="general">
@@ -528,22 +503,10 @@ class CPAC_Settings {
 								<?php settings_fields( 'cpac-general-settings' ); ?>
 								<?php $options = get_option( 'cpac_general_options' ); ?>
 								<p>
-									<br/>
-								</p>
-								<?php
-								/*
-								<p>
-									<label for="show_hidden">
-										<input name="cpac_general_options[show_hidden]" id="show_hidden" type="checkbox" value="1" <?php checked( isset( $options['show_hidden'] ) ? $options['show_hidden'] : '', '1' ); ?>>
-										<?php _e( 'Show hidden custom fields. Default is <code>off</code>.', 'cpac' ); ?>
-									</label>
-								</p>
-								*/
-								?>
-								<p>
 									<label for="show_edit_button">
-										<input name="cpac_general_options[show_edit_button]" id="show_edit_button" type="checkbox" value="1" <?php checked( isset( $options['show_edit_button'] ) ? $options['show_edit_button'] : '', '1' ); ?>>
-										<?php _e( 'Show "Edit Columns" button on admin screens. Default is <code>off</code>.', 'cpac' ); ?>
+										<input name="cpac_general_options[show_edit_button]" type="hidden" value="0" >
+										<input name="cpac_general_options[show_edit_button]" id="show_edit_button" type="checkbox" value="1" <?php checked( ! isset( $options['show_edit_button'] ) || ( '1' == $options['show_edit_button'] ) ); ?>>
+										<?php _e( 'Show "Edit Columns" button on admin screens. Default is <code>on</code>.', 'cpac' ); ?>
 									</label>
 								</p>
 
@@ -613,7 +576,9 @@ class CPAC_Settings {
 	 */
 	public function display() {
 
-		if ( $this->welcome_screen() ) return;
+		if ( $this->welcome_screen() ) {
+			return;
+		}
 
 		$tabs = array(
 			'general'	=> __( 'Admin Columns', 'cpac' ),

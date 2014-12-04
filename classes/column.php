@@ -79,7 +79,7 @@ class CPAC_Column {
 	/**
 	 * Determine whether this column type should be available
 	 *
-	 * @since 2.3
+	 * @since 2.2
 	 *
 	 * @return bool Whether the column type should be available
 	 */
@@ -139,8 +139,10 @@ class CPAC_Column {
 
 		// Default options
 		$default_options = array(
-			'width'	=> null, // Width for this column.
-			'state'	=> 'off' // Active state for this column.
+			'before'	=> '', // Before field
+			'after'		=> '', // After field
+			'width'		=> null, // Width for this column.
+			'state'		=> 'off' // Active state for this column.
 		);
 
 		/**
@@ -308,7 +310,10 @@ class CPAC_Column {
 
 			// Label can not contains the character ':', because
 			// CPAC_Column::get_sanitized_label() will return an empty string
-			$options['label'] = str_replace( ':', '', $options['label'] );
+			// and make an exception for site_url()
+			if ( false === strpos( $options['label'], site_url() ) ) {
+				$options['label'] = str_replace( ':', '', $options['label'] );
+			}
 		}
 
 		// used by child classes for additional sanitizing
@@ -515,6 +520,46 @@ class CPAC_Column {
 	}
 
 	/**
+	 * Get post type
+	 *
+	 * @since 2.1.1
+	 */
+	function get_post_type() {
+		return isset( $this->storage_model->post_type ) ? $this->storage_model->post_type : false;
+	}
+
+	/**
+	 * @since 2.2.6
+	 */
+	public function get_terms_for_display( $term_ids, $taxonomy ) {
+		$values = array();
+		if ( $term_ids && ! is_wp_error( $term_ids ) ) {
+			$post_type = $this->get_post_type();
+			foreach ( $term_ids as $term_id ) {
+				$term = get_term( $term_id, $taxonomy );
+				$title = esc_html( sanitize_term_field( 'name', $term->name, $term->term_id, $term->taxonomy, 'edit' ) );
+
+				$filter_key = $term->taxonomy;
+				if ( 'category' === $term->taxonomy ) {
+					$filter_key = 'category_name';
+				}
+
+				$link = "<a href='edit.php?post_type={$post_type}&{$filter_key}={$term->slug}'>{$title}</a>";
+				if ( $post_type == 'attachment' ) {
+					$link = "<a href='upload.php?taxonomy={$filter_key}&term={$term->slug}'>{$title}</a>";
+				}
+
+				$values[] = $link;
+			}
+		}
+		if ( ! $values ) {
+			return false;
+		}
+
+		return implode( ', ', $values );
+	}
+
+	/**
 	 * @since 2.0
 	 * @param string $name
 	 * @return array Image Sizes
@@ -565,6 +610,52 @@ class CPAC_Column {
 	}
 
 	/**
+	 * @since: 2.2.6
+	 *
+	 */
+	function get_color_for_display( $color_hex ) {
+		if ( ! $color_hex ) {
+			return false;
+		}
+		$text_color = $this->get_text_color( $color_hex );
+		return "<div class='cpac-color'><span style='background-color:{$color_hex};color:{$text_color}'>{$color_hex}</span></div>";
+	}
+
+	/**
+	 * Determines text color absed on bakground coloring.
+	 *
+	 * @since 1.0
+	 */
+	function get_text_color( $bg_color ) {
+
+		$rgb = $this->hex2rgb( $bg_color );
+
+		return $rgb && ( ( $rgb[0]*0.299 + $rgb[1]*0.587 + $rgb[2]*0.114 ) < 186 ) ? '#ffffff' : '#333333';
+	}
+
+	/**
+	 * Convert hex to rgb
+	 *
+	 * @since 1.0
+	 */
+	function hex2rgb( $hex ) {
+		$hex = str_replace( "#", "", $hex );
+
+		if(strlen($hex) == 3) {
+			$r = hexdec(substr($hex,0,1).substr($hex,0,1));
+			$g = hexdec(substr($hex,1,1).substr($hex,1,1));
+			$b = hexdec(substr($hex,2,1).substr($hex,2,1));
+		} else {
+			$r = hexdec(substr($hex,0,2));
+			$g = hexdec(substr($hex,2,2));
+			$b = hexdec(substr($hex,4,2));
+		}
+		$rgb = array($r, $g, $b);
+
+		return $rgb;
+	}
+
+	/**
 	 * @since 1.0
 	 * @param mixed $meta Image files or Image ID's
 	 * @param array $args
@@ -578,7 +669,7 @@ class CPAC_Column {
 		}
 
 		// turn string to array
-		if ( is_string( $images ) ) {
+		if ( is_string( $images ) || is_numeric( $images ) ) {
 			if ( strpos( $images, ',' ) !== false ) {
 				$images = array_filter( explode( ',', $this->strip_trim( str_replace( ' ', '', $images ) ) ) );
 			}
@@ -747,6 +838,26 @@ class CPAC_Column {
 	}
 
 	/**
+	 * Get before value
+	 *
+	 * @since 1.0
+	 */
+	public function get_before() {
+
+		return stripslashes( $this->options->before );
+	}
+
+	/**
+	 * Get after value
+	 *
+	 * @since 1.0
+	 */
+	public function get_after() {
+
+		return stripslashes( $this->options->after );
+	}
+
+	/**
 	 * @since 2.0
 	 * @param string $field_key
 	 * @return string Attribute Name
@@ -890,7 +1001,7 @@ class CPAC_Column {
 		asort( $_columns );
 
 		$list = "<optgroup label='{$label}'>";
-		foreach ( $_columns as $type => $label ){
+		foreach ( $_columns as $type => $label ) {
 			$selected = selected( $this->properties->type, $type, false );
 			$list .= "<option value='{$type}'{$selected}>{$label}</option>";
 		}

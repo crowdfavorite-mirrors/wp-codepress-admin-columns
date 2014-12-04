@@ -31,7 +31,7 @@ class CPAC_Storage_Model_Post extends CPAC_Storage_Model {
 		add_action( "manage_{$this->post_type}_posts_custom_column", array( $this, 'manage_value' ), 100, 2 );
 
 		// @todo: description
-		add_action( 'load-edit.php', array( $this, 'set_columns' ), 1000 );
+		add_action( 'load-edit.php', array( $this, 'set_columns_on_current_screen' ), 1000 );
 
 		parent::__construct();
 	}
@@ -145,7 +145,7 @@ class CPAC_Storage_Model_Post extends CPAC_Storage_Model {
 
 		// get_column_headers() runs through both the manage_{screenid}_columns
 		// and manage_{$post_type}_posts_columns filters
-		$columns = apply_filters( 'manage_edit-' . $this->key . '_columns', array() );
+		$columns = (array) apply_filters( 'manage_edit-' . $this->key . '_columns', array() );
 		$columns = array_filter( $columns );
 
 		return $columns;
